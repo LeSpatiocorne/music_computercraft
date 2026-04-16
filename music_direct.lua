@@ -1,5 +1,5 @@
 -- Header
-local VERSION = 1.03
+local VERSION = 1.04
 local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
 ---------
 local function autoUpdate()
@@ -165,6 +165,8 @@ local function handleCommand(cmd)
         forceBreakAudio()
     elseif root == "play" then
         ws.send(textutils.serializeJSON({type="play"}))
+    elseif root == "resync" then
+        ws.send(textutils.serializeJSON({type="resync"}))
     elseif root == "clear" then
         state.input = ""
         state.infoMsg = ""
@@ -178,7 +180,7 @@ local function handleCommand(cmd)
             draw()
         end
     elseif root == "help" then
-        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, repeat [one/all/off], clear, quit"
+        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, repeat [one/all/off], resync, clear, quit"
         draw()
     elseif root == "quit" then
         ws.send(textutils.serializeJSON({type="leave"}))
@@ -213,17 +215,6 @@ local function inputLoop()
                 end
                 state.input = ""
                 draw()
-            elseif key == keys.numPad0 then state.input = state.input .. "0"; draw()
-            elseif key == keys.numPad1 then state.input = state.input .. "1"; draw()
-            elseif key == keys.numPad2 then state.input = state.input .. "2"; draw()
-            elseif key == keys.numPad3 then state.input = state.input .. "3"; draw()
-            elseif key == keys.numPad4 then state.input = state.input .. "4"; draw()
-            elseif key == keys.numPad5 then state.input = state.input .. "5"; draw()
-            elseif key == keys.numPad6 then state.input = state.input .. "6"; draw()
-            elseif key == keys.numPad7 then state.input = state.input .. "7"; draw()
-            elseif key == keys.numPad8 then state.input = state.input .. "8"; draw()
-            elseif key == keys.numPad9 then state.input = state.input .. "9"; draw()
-            elseif key == keys.numPadDecimal then state.input = state.input .. "."; draw()
             end
         end
     end
@@ -267,6 +258,10 @@ local function wsLoop()
                         state.localReceiveTime = os.clock()
                         draw()
                     end
+                elseif data.type == "resync_target" then
+                    forceBreakAudio()
+                    state.infoMsg = "Resyncing..."
+                    draw()
                 end
             end
         else
@@ -278,14 +273,18 @@ local function wsLoop()
 end
 
 local currentAudioId = nil
+local currentStartTime = nil
 
 local function audioLoop()
     while true do
         sleep(0.1)
         if state.status == "playing" and state.current and state.current.ready and state.current.url then
             local targetUrl = state.current.url
-            if targetUrl ~= currentAudioId then
+            local targetStartTime = state.startTime
+            if targetUrl ~= currentAudioId or targetStartTime ~= currentStartTime then
                 abortedByCommand = false
+                currentAudioId = targetUrl
+                currentStartTime = targetStartTime
                 currentAudioId = targetUrl
                 
                 local serverDelta = (state.serverTime - state.startTime) / 1000
@@ -306,7 +305,7 @@ local function audioLoop()
                 
                 if handle then
                     currentHttpHandle = handle
-                    while currentAudioId == targetUrl and state.status == "playing" and currentHttpHandle do
+                    while currentAudioId == targetUrl and currentStartTime == targetStartTime and state.status == "playing" and currentHttpHandle do
                         local ok, chunk = pcall(function() return currentHttpHandle.read(16 * 1024) end)
                         
                         if not ok or not chunk then break end
@@ -314,7 +313,7 @@ local function audioLoop()
                         local buffer = decoder(chunk)
                         while not speaker.playAudio(buffer) do
                             os.pullEvent("speaker_audio_empty")
-                            if currentAudioId ~= targetUrl or state.status ~= "playing" or not currentHttpHandle then
+                            if currentAudioId ~= targetUrl or currentStartTime ~= targetStartTime or state.status ~= "playing" or not currentHttpHandle then
                                 break
                             end
                         end
@@ -324,14 +323,14 @@ local function audioLoop()
                         currentHttpHandle = nil
                     end
                 end
-                if currentAudioId == targetUrl and state.status == "playing" and not abortedByCommand then
+                if currentAudioId == targetUrl and currentStartTime == targetStartTime and state.status == "playing" and not abortedByCommand then
                      ws.send(textutils.serializeJSON({type="next", auto=true}))
                 end
                 abortedByCommand = false
-                currentAudioId = nil
             end
         else
             currentAudioId = nil
+            currentStartTime = nil
         end
     end
 end
