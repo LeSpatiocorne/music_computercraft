@@ -285,6 +285,7 @@ local function audioLoop()
         if state.status == "playing" and state.current and state.current.ready and state.current.url then
             local targetUrl = state.current.url
             if targetUrl ~= currentAudioId then
+                abortedByCommand = false
                 currentAudioId = targetUrl
                 
                 local serverDelta = (state.serverTime - state.startTime) / 1000
