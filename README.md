@@ -19,4 +19,4 @@ We got 3 layers:
 # How to install
 
 open computer and past this command :
-pastebin run https://pastebin.com/bBuGnETS
+```pastebin run https://pastebin.com/bBuGnETS```
