@@ -1,5 +1,5 @@
 -- Header
-local VERSION = 1.02
+local VERSION = 1.03
 local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
 ---------
 local function autoUpdate()
@@ -70,7 +70,8 @@ local state = {
     pauseOffset = 0,
     localReceiveTime = 0,
     infoMsg = "Ready !",
-    input = ""
+    input = "",
+    repeatMode = "all"
 }
 
 local function forceBreakAudio()
@@ -105,6 +106,7 @@ local function draw()
         else
              print("Status   : Waiting...")
         end
+        print("Repeat  : " .. state.repeatMode)
     else
         print("Playing : Nothing")
     end
@@ -167,8 +169,16 @@ local function handleCommand(cmd)
         state.input = ""
         state.infoMsg = ""
         draw()
+    elseif root == "repeat" and args[2] then
+        local mode = args[2]:lower()
+        if mode == "one" or mode == "all" or mode == "off" then
+            ws.send(textutils.serializeJSON({type="repeat", mode=mode}))
+        else
+            state.infoMsg = "Usage: repeat [one/all/off]"
+            draw()
+        end
     elseif root == "help" then
-        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, clear, quit"
+        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, repeat [one/all/off], clear, quit"
         draw()
     elseif root == "quit" then
         ws.send(textutils.serializeJSON({type="leave"}))
@@ -253,6 +263,7 @@ local function wsLoop()
                         state.startTime = data.startTime
                         state.pauseOffset = data.pauseOffset or 0
                         state.serverTime = data.serverTime
+                        state.repeatMode = data.repeatMode or "all"
                         state.localReceiveTime = os.clock()
                         draw()
                     end
@@ -313,7 +324,7 @@ local function audioLoop()
                     end
                 end
                 if currentAudioId == targetUrl and state.status == "playing" and not abortedByCommand then
-                     ws.send(textutils.serializeJSON({type="next"}))
+                     ws.send(textutils.serializeJSON({type="next", auto=true}))
                 end
                 abortedByCommand = false
                 currentAudioId = nil
