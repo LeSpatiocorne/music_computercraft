@@ -1,7 +1,55 @@
+-- Header
+local VERSION = 1.0
+local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
+---------
+local function autoUpdate()
+    term.clear()
+    term.setCursorPos(1,1)
+    print("Checking for update...")
+    
+    local request = http.get(GITHUB_URL)
+    if not request then
+        print("Unable to update, please check your network.")
+        sleep(1)
+        return false
+    end
+
+    local newCode = request.readAll()
+    request.close()
+
+    local remoteVersionText = newCode:match('local VERSION%s*=%s*([%d%.]+)')
+    local remoteVersion = tonumber(remoteVersionText)
+
+    if remoteVersion and remoteVersion > VERSION then
+        print("New version v" .. remoteVersion .. " found! (Current: " .. VERSION .. ")")
+        print("Applying update...")
+
+        local currentFilePath = shell.getRunningProgram()
+        local file = fs.open(currentFilePath, "w")
+        file.write(newCode)
+        file.close()
+
+        print("Update successful. Restarting program...")
+        sleep(1.5)
+        shell.run(currentFilePath)
+        return true
+    end
+    
+    return false
+end
+
+if autoUpdate() then
+    return
+end
+
+---------------------------------------------------
+-- PROGRAM =========================================
+---------------------------------------------------
+
 local dfpwm = require("cc.audio.dfpwm")
 local speaker = peripheral.find("speaker")
 if not speaker then
-    error("Aucun speaker trouve, connectez-en un!", 0)
+    error("No speaker found, please connect one!", 0)
 end
 local decoder = dfpwm.make_decoder()
 
@@ -21,7 +69,7 @@ local state = {
     serverTime = 0,
     pauseOffset = 0,
     localReceiveTime = 0,
-    infoMsg = "Pret !",
+    infoMsg = "Ready !",
     input = ""
 }
 
@@ -38,39 +86,39 @@ local function draw()
     term.setCursorPos(1, 1)
     print("=ZICPARTY=")
     if state.code then
-        print("Code pour inviter et rejoindre : " .. state.code)
+        print("Invite code : " .. state.code)
     else
-        print("Rejoignez ou creez une salle (tapez create)")
+        print("Join or create a room (type create)")
     end
     print("")
 
     if state.current then
-        print("En cours : " .. state.current.title .. " (" .. state.current.channel .. ")")
+        print("Playing : " .. state.current.title .. " (" .. state.current.channel .. ")")
         if state.status == "playing" then
             if not state.current.ready then
-                print("Statut   : Telechargement de la piste...")
+                print("Status   : Downloading track...")
             else
-                print("Statut   : En lecture \14")
+                print("Status   : Playing \14")
             end
         elseif state.status == "stopped" then
-             print("Statut   : En pause ||")
+             print("Status   : Paused ||")
         else
-             print("Statut   : En attente...")
+             print("Status   : Waiting...")
         end
     else
-        print("En cours : Rien")
+        print("Playing : Nothing")
     end
     print("")
 
     if state.next then
-        print("A suivre : " .. state.next.title)
+        print("Next : " .. state.next.title)
     else
-        print("A suivre : Rien")
+        print("Next : Nothing")
     end
     print("")
     
     if state.infoMsg ~= "" then
-        print("Infos    : " .. state.infoMsg)
+        print("Infos : " .. state.infoMsg)
     end
 
     local w, h = term.getSize()
@@ -123,7 +171,7 @@ local function handleCommand(cmd)
         state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, clear"
         draw()
     else
-        state.infoMsg = "Commande inconnue. Tapez help."
+        state.infoMsg = "Unknown command. Type help."
         draw()
     end
 end
@@ -158,17 +206,17 @@ local function wsLoop()
             if data then
                 if data.type == "joined" then
                     state.code = data.code
-                    state.infoMsg = "Salon " .. state.code .. " rejoint!"
+                    state.infoMsg = "Room " .. state.code .. " joined!"
                     draw()
                 elseif data.type == "info" then
                     state.infoMsg = data.message
                     draw()
                 elseif data.type == "error" then
-                    state.infoMsg = "Erreur: " .. data.message
+                    state.infoMsg = "Error: " .. data.message
                     draw()
                 elseif data.type == "left" then
                     state.code = nil
-                    state.infoMsg = "Vous avez quitte la salle."
+                    state.infoMsg = "You left the room."
                     draw()
                 elseif data.type == "state" then
                     if data.code == state.code then
@@ -190,7 +238,7 @@ local function wsLoop()
                 end
             end
         else
-            print("Deconnecte du serveur.")
+            print("Disconnected from server.")
             forceBreakAudio()
             break
         end
@@ -257,11 +305,11 @@ end
 
 term.clear()
 term.setCursorPos(1,1)
-print("Connexion au serveur WebSockets...")
+print("Connecting to WebSocket server...")
 local err
 ws, err = http.websocket(WS_URL)
 if not ws then
-    print("Erreur : connexion au serveur impossible (" .. tostring(err) .. ")")
+    print("Error : unable to connect to server (" .. tostring(err) .. ")")
     return
 end
 
