@@ -1,5 +1,5 @@
 -- Header
-local VERSION = 1.01
+local VERSION = 1.02
 local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
 ---------
 local function autoUpdate()
@@ -194,7 +194,7 @@ local function inputLoop()
             if key == keys.backspace and #state.input > 0 then
                 state.input = state.input:sub(1, -2)
                 draw()
-            elseif key == keys.enter then
+            elseif key == keys.enter or key == keys.numPadEnter then
                 if handleCommand(state.input) then
                     term.clear()
                     term.setCursorPos(1,1)
@@ -203,6 +203,17 @@ local function inputLoop()
                 end
                 state.input = ""
                 draw()
+            elseif key == keys.numPad0 then state.input = state.input .. "0"; draw()
+            elseif key == keys.numPad1 then state.input = state.input .. "1"; draw()
+            elseif key == keys.numPad2 then state.input = state.input .. "2"; draw()
+            elseif key == keys.numPad3 then state.input = state.input .. "3"; draw()
+            elseif key == keys.numPad4 then state.input = state.input .. "4"; draw()
+            elseif key == keys.numPad5 then state.input = state.input .. "5"; draw()
+            elseif key == keys.numPad6 then state.input = state.input .. "6"; draw()
+            elseif key == keys.numPad7 then state.input = state.input .. "7"; draw()
+            elseif key == keys.numPad8 then state.input = state.input .. "8"; draw()
+            elseif key == keys.numPad9 then state.input = state.input .. "9"; draw()
+            elseif key == keys.numPadDecimal then state.input = state.input .. "."; draw()
             end
         end
     end
