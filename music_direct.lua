@@ -1,5 +1,5 @@
 -- Header
-local VERSION = 1.0
+local VERSION = 1.0.1
 local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
 ---------
 local function autoUpdate()
@@ -168,8 +168,13 @@ local function handleCommand(cmd)
         state.infoMsg = ""
         draw()
     elseif root == "help" then
-        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, clear"
+        state.infoMsg = "create, join [code], leave, sr [url], sd, next, prev, pause, play, clear, quit"
         draw()
+    elseif root == "quit" then
+        ws.send(textutils.serializeJSON({type="leave"}))
+        forceBreakAudio()
+        pcall(function() ws.close() end)
+        return true
     else
         state.infoMsg = "Unknown command. Type help."
         draw()
@@ -190,7 +195,12 @@ local function inputLoop()
                 state.input = state.input:sub(1, -2)
                 draw()
             elseif key == keys.enter then
-                handleCommand(state.input)
+                if handleCommand(state.input) then
+                    term.clear()
+                    term.setCursorPos(1,1)
+                    print("Bye!")
+                    return
+                end
                 state.input = ""
                 draw()
             end
