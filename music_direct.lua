@@ -1,5 +1,5 @@
 -- Header
-local VERSION = 1.0.1
+local VERSION = 1.01
 local GITHUB_URL = "https://raw.githubusercontent.com/LeSpatiocorne/music_computercraft/main/music_direct.lua"
 ---------
 local function autoUpdate()
